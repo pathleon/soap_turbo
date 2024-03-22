@@ -417,9 +417,9 @@ module soap_turbo_radial_op
   function M_radial_monomial(r, degree)
     implicit none
 
-    integer, intent(in) :: degree 
+!    integer, intent(in) :: degree
     real*8, intent(in) :: r
-    integer :: i, j
+    integer :: i, j, degree 
     real*8, allocatable :: coeff(:,:), radial_terms(:), M_radial_monomial(:,:)
     
     degree = 6
@@ -459,7 +459,7 @@ module soap_turbo_radial_op
 ! basis and orthonormal basis. Unlike the original function, it does not
 ! require blas/lapack to work and instead relies on pretabulated values.
 !
-  subroutine get_orthonormalization_matrix_poly3_tabulated(alpha_max, S, W)
+  subroutine get_orthonormalization_matrix_poly3_tabulated_copy(alpha_max, S, W)
 
     implicit none
 
