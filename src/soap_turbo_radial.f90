@@ -82,7 +82,7 @@ module soap_turbo_radial
     logical, intent(in) :: mask(:), do_derivatives, do_central
     character(*), intent(in) :: scaling_mode
 !
-    integer :: n, i, j, k, alpha_max_der
+    integer :: n, i, j, k, alpha_max_der, l
     real*8 :: I_n, I_np1, I_np2, pi, sq2, rj, N_n, N_np1, N_np2, C1, C2, dr, s2, sf2
     real*8 :: W(:,:)
     real*8 :: atom_sigma_f, rj_f
@@ -166,7 +166,7 @@ module soap_turbo_radial
 !   *********************************************
 !
 
-
+    l = 0
     k = 0
     do i = 1, n_sites
       do j = 1, n_neigh(i)
@@ -229,6 +229,7 @@ module soap_turbo_radial
                             amplitude_der*( rj**2 + s2 + dsqrt(8.d0/pi)*atom_sigma_scaled*rj )
             amplitude = amplitude * ( rj**2 + s2 + dsqrt(8.d0/pi)*atom_sigma_scaled*rj )
           end if       
+!          write(*,*)  amplitude
 !         We have the recursion series starting at n = 0, which means alpha = -2
 !         However, we only need to save the expansion coefficients for alpha >= 1
 !         This is I_-1
@@ -280,6 +281,7 @@ module soap_turbo_radial
 !         This explicit ".true." or ".false." logical statement is there for debugging. For
 !         regular code use it can be set to .false.
           if( .false. .or. (rcut_soft - rj) < 4.d0*atom_sigma_scaled )then
+            l = l + 1
             atom_sigma_f = atom_sigma_scaled * dr / nf / dsqrt(s2 + dr**2/nf**2)
             rj_f = (s2 * rcut_soft + dr**2/nf**2*rj) / (s2 + dr**2/nf**2)
 !           We leave this here because in the future atom_sigma will be rj dependent
@@ -312,6 +314,7 @@ module soap_turbo_radial
               I_n = I_np1
               I_np1 = I_np2
             end do
+!            write(*,*)  l, k, rj*rcut_hard_in !, pref_f * exp_coeff_temp2(1:alpha_max)
 !           Compute the contribution to the derivative for this part (excludes the amplitude)
             if( do_derivatives )then
               denom = s2 + dr**2/nf**2
@@ -341,14 +344,19 @@ module soap_turbo_radial
                                               (exp_coeff_temp1(1:alpha_max) + pref_f * exp_coeff_temp2(1:alpha_max))
             exp_coeff_der(1:alpha_max, k) = matmul( W, exp_coeff_der_temp(1:alpha_max) )
           end if
+!          exp_coeff(1:alpha_max, k) = exp_coeff_temp1(1:alpha_max) + pref_f * exp_coeff_temp2(1:alpha_max) 
+!          exp_coeff(1:alpha_max, k) = matmul( W, exp_coeff_temp1(1:alpha_max) + pref_f * exp_coeff_temp2(1:alpha_max) )
           exp_coeff(1:alpha_max, k) = amplitude * matmul( W, exp_coeff_temp1(1:alpha_max) + pref_f * exp_coeff_temp2(1:alpha_max) )
+          if( j == 1 )then
+            print *, exp_coeff(1:alpha_max, k)
+          end if
         end if
       end do
     end do
 
 
 
-
+!    write(*,*) 'Buffer zone contributions: ', l
 !   **************** New basis ******************
 !   This results from the change of variable in the
 !   overlap integrals. We only need this if we want to
@@ -362,13 +370,17 @@ module soap_turbo_radial
 !   *********************************************
 
 !   This is for debugging
-    if( .false. )then
-      open(10, file="radial_expansion_coefficients.dat", status="unknown", access="append")
-      write(10,*) exp_coeff(1:alpha_max, 2)
+    if( .true. )then
+      open(10, file="radial_expansion_coefficients_poly.dat", status="unknown")
+      do i=1, size(exp_coeff, 2)
+      write(10,*) exp_coeff(1:alpha_max, i)
+      end do
       close(10)
       if( do_derivatives )then
-        open(10, file="radial_expansion_derivatives.dat", status="unknown", access="append")
-        write(10,*) exp_coeff_der(1:alpha_max, 2)
+        open(10, file="radial_expansion_derivatives_poly.dat", status="unknown", access="append")
+        do i=1, size(exp_coeff, 2)
+          write(10,*) exp_coeff_der(1:alpha_max, i)
+        end do
         close(10)
       end if
      end if
@@ -716,7 +728,7 @@ module soap_turbo_radial
 !   ***********************************
 
 !   This is for debugging
-    if( .false. )then
+    if( .true. )then
       open(10, file="coefficients.dat", status="unknown", access="append")
       write(10,*) exp_coeff(1:alpha_max, 1)
       close(10)
